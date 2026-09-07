@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Recreate Video Prompt Pack 4.0",
+  "type": "object",
+  "required": ["schema_version", "source_duration", "global_consistency", "visual_master", "asset_library", "segments"],
+  "properties": {
+    "schema_version": {"const": "4.0"},
+    "project_title": {"type": "string"},
+    "source_duration": {"type": "number", "exclusiveMinimum": 0},
+    "global_consistency": {"type": "string", "minLength": 1},
+    "visual_master": {"type": "object", "required": ["core_style", "visual_tone", "color_system", "tonal_structure"], "properties": {
+      "core_style": {"type": "string", "minLength": 1}, "visual_tone": {"type": "string", "minLength": 1},
+      "color_system": {"type": "string", "minLength": 1}, "tonal_structure": {"type": "string", "minLength": 1}
+    }, "additionalProperties": false},
+    "asset_library": {"type": "object", "required": ["characters", "props", "locations"], "properties": {
+      "characters": {"type": "array", "items": {"$ref": "#/$defs/asset"}},
+      "props": {"type": "array", "items": {"$ref": "#/$defs/asset"}},
+      "locations": {"type": "array", "items": {"$ref": "#/$defs/asset"}}
+    }, "additionalProperties": false},
+    "repair_prompts": {"type": "object", "additionalProperties": {"type": "string"}},
+    "segments": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/segment"}}
+  },
+  "$defs": {
+    "evidence": {"enum": ["OBSERVED", "MEASURED", "INFERRED", "UNKNOWN", "USER_PROVIDED"]},
+    "asset": {"type": "object", "required": ["asset_id", "name", "frame_refs", "description_prompt", "narrative_function", "continuity_lock", "evidence_status"], "properties": {
+      "asset_id": {"type": "string", "pattern": "^(CHAR|PROP|LOC)[0-9]{3,}$"}, "name": {"type": "string", "minLength": 1},
+      "frame_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^P[0-9]{3,}-node-[0-9]{2,}$"}},
+      "description_prompt": {"type": "string", "minLength": 1}, "narrative_function": {"type": "string", "minLength": 1},
+      "continuity_lock": {"type": "string", "minLength": 1}, "evidence_status": {"$ref": "#/$defs/evidence"}
+    }, "additionalProperties": true},
+    "performanceChain": {"type": "object", "required": ["emotion_intent", "visible_expression", "gaze_target", "preparation", "execution", "follow_through", "settle"], "properties": {
+      "emotion_intent": {"type": "string", "minLength": 1}, "visible_expression": {"type": "string", "minLength": 1},
+      "gaze_target": {"type": "string", "minLength": 1}, "preparation": {"type": "string", "minLength": 1},
+      "execution": {"type": "string", "minLength": 1}, "follow_through": {"type": "string", "minLength": 1},
+      "settle": {"type": "string", "minLength": 1}
+    }, "additionalProperties": false},
+    "actionBeat": {"type": "object", "required": ["beat_id", "subject_asset_id", "subject", "actor_type", "object_asset_ids", "start", "end", "action", "object_or_target", "spatial_relation", "motion_rhythm", "physical_feedback", "timeline_fact", "timeline_required", "evidence_status"], "properties": {
+      "beat_id": {"type": "string", "pattern": "^B[0-9]{3,}$"},
+      "subject_asset_id": {"type": "string", "pattern": "^(CHAR|PROP|LOC)[0-9]{3,}$|^(CAMERA|GRAPHICS|ENVIRONMENT)$"},
+      "subject": {"type": "string", "minLength": 1}, "actor_type": {"enum": ["character", "creature", "object", "environment", "camera", "graphics"]},
+      "object_asset_ids": {"type": "array", "items": {"type": "string", "pattern": "^(CHAR|PROP|LOC)[0-9]{3,}$"}},
+      "start": {"type": "number", "minimum": 0}, "end": {"type": "number", "exclusiveMinimum": 0},
+      "action": {"type": "string", "minLength": 1}, "object_or_target": {"type": "string", "minLength": 1},
+      "spatial_relation": {"type": "string", "minLength": 1}, "motion_rhythm": {"type": "string", "minLength": 1},
+      "physical_feedback": {"type": "string", "minLength": 1}, "performance_chain": {"$ref": "#/$defs/performanceChain"},
+      "interaction_chain_id": {"type": "string", "pattern": "^X[0-9]{3,}$"},
+      "interaction_kind": {"enum": ["ownership_transfer", "trajectory", "handoff"]},
+      "interaction_object_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^(CHAR|PROP|LOC)[0-9]{3,}$"}},
+      "interaction_phase": {"enum": ["trigger", "launch", "transit", "contact", "capture", "ownership_transfer", "carry", "return", "result", "observer_response", "settle"]},
+      "state_in": {"type": "string", "minLength": 1}, "state_out": {"type": "string", "minLength": 1},
+      "timeline_fact": {"type": "string", "minLength": 1}, "timeline_required": {"type": "boolean"}, "evidence_status": {"$ref": "#/$defs/evidence"}
+    }, "dependentRequired": {
+      "interaction_chain_id": ["interaction_kind", "interaction_object_ids", "interaction_phase", "state_in", "state_out"],
+      "interaction_kind": ["interaction_chain_id", "interaction_object_ids", "interaction_phase", "state_in", "state_out"],
+      "interaction_object_ids": ["interaction_chain_id", "interaction_kind", "interaction_phase", "state_in", "state_out"],
+      "interaction_phase": ["interaction_chain_id", "interaction_kind", "interaction_object_ids", "state_in", "state_out"],
+      "state_in": ["interaction_chain_id", "interaction_kind", "interaction_object_ids", "interaction_phase", "state_out"],
+      "state_out": ["interaction_chain_id", "interaction_kind", "interaction_object_ids", "interaction_phase", "state_in"]
+    }, "allOf": [{"if": {"properties": {"actor_type": {"enum": ["character", "creature"]}}}, "then": {"required": ["performance_chain"]}, "else": {"not": {"required": ["performance_chain"]}}}], "additionalProperties": false},
+    "layerEvent": {"type": "object", "required": ["event_id", "layer_type", "start", "end", "content", "appearance", "placement_depth", "timeline_fact", "timeline_required", "evidence_status"], "properties": {
+      "event_id": {"type": "string", "pattern": "^L[0-9]{3,}$"}, "layer_type": {"enum": ["diegetic_display", "editorial_title", "environment_vfx", "ui_overlay", "transition_vfx"]},
+      "start": {"type": "number", "minimum": 0}, "end": {"type": "number", "exclusiveMinimum": 0},
+      "content": {"type": "string", "minLength": 1}, "appearance": {"type": "string", "minLength": 1},
+      "placement_depth": {"type": "string", "minLength": 1}, "timeline_fact": {"type": "string", "minLength": 1},
+      "timeline_required": {"type": "boolean"}, "evidence_status": {"$ref": "#/$defs/evidence"}
+    }, "additionalProperties": false},
+    "firstAppearanceEvent": {"type": "object", "required": ["event_id", "asset_id", "appearance_type", "start", "end", "prior_visibility", "source_space", "reveal_trigger", "entry_direction", "frame_region", "first_visible_part", "initial_pose_state", "emergence_motion", "first_visible_action", "completion_state", "observer_reaction", "evidence_frame_refs", "timeline_fact", "timeline_required", "evidence_status"], "properties": {
+      "event_id": {"type": "string", "pattern": "^A[0-9]{3,}$"}, "asset_id": {"type": "string", "pattern": "^CHAR[0-9]{3,}$"},
+      "appearance_type": {"enum": ["initial_presence", "entry", "reveal", "emergence"]}, "start": {"type": "number", "minimum": 0},
+      "end": {"type": "number", "exclusiveMinimum": 0}, "prior_visibility": {"type": "string", "minLength": 1}, "source_space": {"type": "string", "minLength": 1},
+      "reveal_trigger": {"type": "string", "minLength": 1}, "entry_direction": {"type": "string", "minLength": 1},
+      "frame_region": {"type": "string", "minLength": 1}, "first_visible_part": {"type": "string", "minLength": 1},
+      "initial_pose_state": {"type": "string", "minLength": 1}, "emergence_motion": {"type": "string", "minLength": 1},
+      "first_visible_action": {"type": "string", "minLength": 1}, "completion_state": {"type": "string", "minLength": 1},
+      "observer_reaction": {"type": "string", "minLength": 1},
+      "evidence_frame_refs": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "pattern": "^P[0-9]{3,}-node-[0-9]{2,}$"}},
+      "timeline_fact": {"type": "string", "minLength": 1}, "timeline_required": {"type": "boolean"}, "evidence_status": {"$ref": "#/$defs/evidence"}
+    }, "additionalProperties": false},
+    "impactEvent": {"type": "object", "required": ["event_id", "event_type", "start", "end", "source_time", "source_asset_id", "target_asset_id", "audio_cue", "visible_cause", "visible_effect", "causal_verdict", "dense_keyframe_times", "timeline_fact", "timeline_required", "evidence_status"], "properties": {
+      "event_id": {"type": "string", "pattern": "^I[0-9]{3,}$"}, "event_type": {"enum": ["gunshot", "collision", "strike", "fall", "explosion", "other"]},
+      "start": {"type": "number", "minimum": 0}, "end": {"type": "number", "exclusiveMinimum": 0}, "source_time": {"type": "number", "minimum": 0},
+      "source_asset_id": {"type": "string", "minLength": 1}, "target_asset_id": {"type": "string", "minLength": 1},
+      "audio_cue": {"type": "string", "minLength": 1}, "visible_cause": {"type": "string", "minLength": 1}, "visible_effect": {"type": "string", "minLength": 1},
+      "causal_verdict": {"enum": ["CONFIRMED", "PROBABLE", "UNCERTAIN", "REJECTED"]},
+      "dense_keyframe_times": {"type": "array", "minItems": 3, "items": {"type": "number", "minimum": 0}},
+      "timeline_fact": {"type": "string", "minLength": 1}, "timeline_required": {"type": "boolean"}, "evidence_status": {"$ref": "#/$defs/evidence"}
+    }, "additionalProperties": false},
+    "camera": {"type": "object", "required": ["equipment_name", "lens_name", "focal_length", "aperture", "camera_height_angle", "composition", "movement", "focus_depth"], "properties": {
+      "equipment_name": {"type": "string", "minLength": 1}, "lens_name": {"type": "string", "minLength": 1},
+      "focal_length": {"type": "string", "minLength": 1}, "aperture": {"type": "string", "minLength": 1},
+      "camera_height_angle": {"type": "string", "minLength": 1}, "composition": {"type": "string", "minLength": 1},
+      "movement": {"type": "string", "minLength": 1}, "focus_depth": {"type": "string", "minLength": 1}
+    }, "additionalProperties": true},
+    "timelineEvent": {"type": "object", "required": ["start", "end", "source_refs", "shot_id"], "properties": {
+      "start": {"type": "number", "minimum": 0}, "end": {"type": "number", "exclusiveMinimum": 0},
+      "shot_id": {"type": "string", "pattern": "^SH[0-9]{3,}$"},
+      "source_refs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[BLAI][0-9]{3,}$"}},
+      "text": {"type": "string", "minLength": 1}
+    }, "additionalProperties": false},
+    "shotPrompt": {"type": "object", "required": ["shot_id", "start", "end", "duration", "frame_refs", "present_entities", "scene", "action_beats", "first_appearance_events", "layer_events", "impact_events", "camera", "lighting_color", "sound", "edit_instruction", "shot_prompt"], "properties": {
+      "shot_id": {"type": "string", "pattern": "^SH[0-9]{3,}$"}, "start": {"type": "number", "minimum": 0}, "end": {"type": "number", "exclusiveMinimum": 0},
+      "duration": {"type": "number", "exclusiveMinimum": 0}, "frame_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^P[0-9]{3,}-node-[0-9]{2,}$"}},
+      "present_entities": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^(CHAR|PROP|LOC)[0-9]{3,}$"}},
+      "scene": {"type": "string", "minLength": 1}, "action_beats": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/actionBeat"}},
+      "first_appearance_events": {"type": "array", "items": {"$ref": "#/$defs/firstAppearanceEvent"}},
+      "layer_events": {"type": "array", "items": {"$ref": "#/$defs/layerEvent"}}, "impact_events": {"type": "array", "items": {"$ref": "#/$defs/impactEvent"}},
+      "camera": {"$ref": "#/$defs/camera"}, "lighting_color": {"type": "string", "minLength": 1}, "sound": {"type": "string", "minLength": 1},
+      "edit_instruction": {"type": "string", "minLength": 1}, "shot_prompt": {"type": "string", "minLength": 1}
+    }, "additionalProperties": true},
+    "segment": {"type": "object", "required": ["segment_id", "title", "start", "end", "duration", "shot_ids", "keyframe_times", "assets_used", "summary", "segment_consistency", "avoid", "shot_prompts", "timeline_events", "timeline_continuity", "full_prompt"], "properties": {
+      "segment_id": {"type": "string", "pattern": "^P[0-9]{3,}$"}, "title": {"type": "string", "minLength": 1}, "start": {"type": "number", "minimum": 0},
+      "end": {"type": "number", "exclusiveMinimum": 0}, "duration": {"type": "number", "exclusiveMinimum": 0},
+      "shot_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^SH[0-9]{3,}$"}},
+      "keyframe_times": {"type": "array", "minItems": 2, "items": {"type": "number", "minimum": 0}},
+      "assets_used": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^(CHAR|PROP|LOC)[0-9]{3,}$"}},
+      "mode": {"type": "string"}, "aspect_ratio": {"type": "string"}, "summary": {"type": "string", "minLength": 1},
+      "segment_consistency": {"type": "string", "minLength": 1}, "avoid": {"type": "string", "minLength": 1},
+      "shot_prompts": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/shotPrompt"}},
+      "timeline_events": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/timelineEvent"}},
+      "timeline_continuity": {"type": "string", "minLength": 1}, "full_prompt": {"type": "string", "minLength": 1}
+    }, "additionalProperties": true}
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "视频复刻大师video-master"
+  short_description: "交付完整剧本与整合提示词的图文视频复刻故事板"
+  default_prompt: "使用 $video-master 分析我提供的视频；先确认标准或深度模式，再按真实镜头拉片，只交付完整故事剧本和图文分镜故事板。故事板内整合资产表、原视频代表性关键帧、逐镜分析、Seedance 2.5 整段提示词和必要的专项修复提示词。"
